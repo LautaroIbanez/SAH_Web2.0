@@ -14,6 +14,9 @@ import base64
 import os
 from resources import CODIGOS_BRUTO, CODIGOS_DEDUCCIONES, MOTIVOS, TOPE_MAXIMO_PRESTAMO, TASA_ANUAL
 import logging
+import uuid
+import tempfile
+from flask import send_file
 
 # Configuración básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -600,6 +603,16 @@ def update_simulacion(n_clicks, monto_str, cuotas, fecha, state):
         print(f"Error en la simulación: {str(e)}")
         return dbc.Alert(f"Error al generar la simulación: {str(e)}", color="danger")
 
+# Diccionario temporal para guardar archivos generados por sesión
+GENERATED_FILES = {}
+
+@app.server.route('/download/<file_id>')
+def download_file(file_id):
+    file_path = GENERATED_FILES.get(file_id)
+    if file_path and os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    return "Archivo no encontrado", 404
+
 @app.callback(
     Output('nota-output', 'children'),
     Output('nota-download', 'children'),
@@ -628,14 +641,19 @@ def generar_nota_callback(n_clicks, nombre, area, sector, motivo, motivo_detalla
         state.get('neto', 0)
     )
     if docx_bytes is not None:
-        b64 = base64.b64encode(docx_bytes.getvalue()).decode()
-        href = f'data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}'
+        # Guardar archivo temporalmente y generar enlace de descarga
+        temp_dir = tempfile.gettempdir()
+        file_id = str(uuid.uuid4())
+        file_path = os.path.join(temp_dir, f"nota_{file_id}.docx")
+        with open(file_path, "wb") as f:
+            f.write(docx_bytes.getvalue())
+        GENERATED_FILES[file_id] = file_path
+        href = f"/download/{file_id}"
         return (
             dbc.Alert("✅ Nota generada correctamente.", color="success"),
             html.A(
                 "Descargar Nota de Solicitud",
                 href=href,
-                download="nota.docx",
                 className="btn btn-primary"
             )
         )
@@ -926,9 +944,5 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
         print(f"Error al generar nota: {e}")
         return None
 
-import os
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8050))
-    app.run_server(host="0.0.0.0", port=port)
-
+if __name__ == '__main__':
+    app.run()
