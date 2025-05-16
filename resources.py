@@ -36,6 +36,6 @@ MOTIVOS = [
 TOPE_MAXIMO_PRESTAMO = 5_000_000  # 5 millones de pesos
 
 # Tasa anual para préstamos
-TASA_ANUAL = 54.0  # 54% anual
+TASA_ANUAL = 64.0  # 54% anual
 
 
