@@ -13,6 +13,10 @@ import io
 import base64
 import os
 from resources import CODIGOS_BRUTO, CODIGOS_DEDUCCIONES, MOTIVOS, TOPE_MAXIMO_PRESTAMO, TASA_ANUAL
+import logging
+
+# Configuración básica de logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
 # Inicializar la aplicación Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -446,15 +450,17 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
     
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
     simular_disabled = True
+    # Copia defensiva del estado para no perder valores previos
+    state = dict(state) if state else {}
     
-    # Si el trigger fue el input de monto
     if trigger_id == 'monto-input':
         if not monto_str:
             return state, None, None, state.get('nombre', None), None, True
         try:
             monto_limpio = monto_str.replace('$', '').replace(',', '')
             monto_float = float(monto_limpio)
-            state.update({'monto': monto_float})
+            # Solo actualiza 'monto', conserva el resto
+            state['monto'] = monto_float
             return state, None, None, state.get('nombre', None), monto_str, True
         except:
             return state, None, None, state.get('nombre', None), monto_str, True
@@ -472,11 +478,11 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
             bruto, deducciones, neto, detectados = resultado
             _, _, nombre_detectado = extraer_sueldos("temp.pdf")
             if bruto is not None and neto is not None:
-                state.update({
-                    'bruto': bruto,
-                    'neto': neto,
-                    'nombre': nombre_detectado
-                })
+                # Solo actualiza los campos extraídos, conserva el resto
+                state['bruto'] = bruto
+                state['neto'] = neto
+                state['nombre'] = nombre_detectado
+                logging.info(f"PDF subido por: {nombre_detectado} | Bruto: {bruto} | Neto: {neto}")
                 return state, dbc.Alert([
                     html.H5("Datos extraídos correctamente"),
                     html.P(f"Sueldo bruto: ${bruto:,.2f}"),
@@ -517,6 +523,7 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
                     dbc.Alert(f"Cuota mensual estimada: ${cuota:,.2f}", color="success")
                 )
                 simular_disabled = False
+                logging.info(f"Simulación válida: monto={monto}, cuotas={cuotas}, cuota mensual={cuota}")
         except Exception as e:
             print(f"Error al calcular la cuota: {str(e)}")
             validaciones.append(
@@ -524,11 +531,10 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
             )
             cuota = 0
             simular_disabled = True
-        state.update({
-            'cuotas': cuotas,
-            'tasa': TASA_ANUAL,
-            'cuota': cuota
-        })
+        # Solo actualiza los campos de simulación, conserva el resto
+        state['cuotas'] = cuotas
+        state['tasa'] = TASA_ANUAL
+        state['cuota'] = cuota
         return state, None, validaciones, state.get('nombre', None), state.get('monto', None), simular_disabled
     return state, None, None, state.get('nombre', None), state.get('monto', None), True
 
@@ -543,43 +549,31 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
 def update_simulacion(n_clicks, monto_str, cuotas, fecha, state):
     if n_clicks is None:
         return None
-    
-    # Debug prints
     print(f"Valores recibidos:")
     print(f"Monto: {monto_str}")
     print(f"Cuotas: {cuotas}")
     print(f"Fecha: {fecha}")
-    
-    # Validación más detallada
-    campos_faltantes = []
-    
-    # Obtener el monto del estado y validar
     monto = state.get('monto', 0)
     if monto <= 0:
         return dbc.Alert("Por favor ingrese un monto válido mayor a cero.", color="danger")
-    
-    # Convertir valores a los tipos correctos
     try:
         cuotas = int(cuotas) if cuotas is not None else None
     except (ValueError, TypeError):
         print("Error al convertir valores")
         return dbc.Alert("Error en los valores ingresados. Por favor, verifique los datos.", color="danger")
-    
+    campos_faltantes = []
     if cuotas is None or cuotas <= 0:
         campos_faltantes.append("Cuotas")
     if not fecha:
         campos_faltantes.append("Fecha")
-    
     if campos_faltantes:
         return dbc.Alert(
             f"Por favor complete los siguientes campos: {', '.join(campos_faltantes)}",
             color="danger"
         )
-    
     try:
-        # Generar cuadro de amortización
         df_amort = generar_cuadro_amortizacion(monto, cuotas, TASA_ANUAL)
-        
+        logging.info(f"Simulación realizada: monto={monto}, cuotas={cuotas}, fecha={fecha}")
         return [
             html.H4("Resumen de la simulación"),
             dbc.Row([
@@ -621,15 +615,9 @@ def update_simulacion(n_clicks, monto_str, cuotas, fecha, state):
 def generar_nota_callback(n_clicks, nombre, area, sector, motivo, motivo_detallado, puesto, state):
     if n_clicks is None:
         return None, None
-    
     if not all([nombre, area, sector, motivo, motivo_detallado, puesto]):
         return dbc.Alert("Por favor complete todos los datos del usuario.", color="danger"), None
-    
-    # Debug prints para verificar los valores
-    print(f"Motivo seleccionado: {motivo}")
-    print(f"Motivo detallado: {motivo_detallado}")
-    
-    # Generar nota
+    logging.info(f"Nota generada para: {nombre} | Motivo: {motivo} | Detalle: {motivo_detallado} | Área: {area} | Sector: {sector} | Puesto: {puesto}")
     docx_bytes = generar_nota(
         state.get('monto', 0),
         state.get('cuotas', 0),
@@ -639,7 +627,6 @@ def generar_nota_callback(n_clicks, nombre, area, sector, motivo, motivo_detalla
         nombre, area, sector, motivo, motivo_detallado, puesto,
         state.get('neto', 0)
     )
-    
     if docx_bytes is not None:
         b64 = base64.b64encode(docx_bytes.getvalue()).decode()
         href = f'data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}'
@@ -940,4 +927,4 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
         return None
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run()
