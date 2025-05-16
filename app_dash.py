@@ -944,5 +944,8 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
         print(f"Error al generar nota: {e}")
         return None
 
-if __name__ == '__main__':
-    app.run()
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8050))
+    app.run_server(host="0.0.0.0", port=port)
+
