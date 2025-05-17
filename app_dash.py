@@ -19,37 +19,51 @@ import uuid
 import tempfile
 from flask import send_file
 
-# Configurar el logging para escribir en archivo y consola
-log_filename = 'logs.txt'
-metrics_filename = 'metrics.json'
-user_log_filename = 'user_log.txt'
+# Configuración de logging
+def setup_logging():
+    # Obtener el entorno (desarrollo o producción)
+    is_production = os.environ.get('RENDER', 'false').lower() == 'true'
+    
+    # Configurar el logger principal
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # Formato común para todos los logs
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    
+    # En desarrollo, escribir a archivos
+    if not is_production:
+        # Logs técnicos
+        log_filename = 'logs.txt'
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setFormatter(formatter)
+        root_logger.addHandler(file_handler)
+        
+        # Logs de usuario
+        user_logger = logging.getLogger('user')
+        user_logger.setLevel(logging.INFO)
+        user_handler = logging.FileHandler('user_log.txt')
+        user_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+        user_logger.addHandler(user_handler)
+        
+        # Logs de métricas
+        metrics_logger = logging.getLogger('metrics')
+        metrics_logger.setLevel(logging.INFO)
+        metrics_handler = logging.FileHandler('metrics.json')
+        metrics_handler.setFormatter(logging.Formatter('%(message)s'))
+        metrics_logger.addHandler(metrics_handler)
+    
+    # En ambos entornos, escribir a consola
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
 
-# Configurar el logger principal (logs técnicos)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s',
-    handlers=[
-        logging.FileHandler(log_filename),
-        logging.StreamHandler()
-    ]
-)
-
-# Crear un logger específico para métricas
-metrics_logger = logging.getLogger('metrics')
-metrics_logger.setLevel(logging.INFO)
-metrics_handler = logging.FileHandler(metrics_filename)
-metrics_handler.setFormatter(logging.Formatter('%(message)s'))
-metrics_logger.addHandler(metrics_handler)
-
-# Crear un logger específico para acciones del usuario
-user_logger = logging.getLogger('user')
-user_logger.setLevel(logging.INFO)
-user_handler = logging.FileHandler(user_log_filename)
-user_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
-user_logger.addHandler(user_handler)
+# Inicializar logging
+setup_logging()
 
 def log_user_action(action, details):
     """Función auxiliar para registrar acciones del usuario"""
+    user_logger = logging.getLogger('user')
     user_logger.info(f"{action}: {details}")
 
 def log_metric(event_type, data):
@@ -59,6 +73,7 @@ def log_metric(event_type, data):
         'event_type': event_type,
         'data': data
     }
+    metrics_logger = logging.getLogger('metrics')
     metrics_logger.info(json.dumps(metric_data))
 
 # Inicializar la aplicación Dash
@@ -70,7 +85,7 @@ app.index_string = '''
 <html>
     <head>
         {%metas%}
-        <title>Sistema de Adelantos Haberes</title>
+        <title>Simulador de Adelanto de Haberes</title>
         {%favicon%}
         {%css%}
         <style>
@@ -89,14 +104,38 @@ app.index_string = '''
 
             .navbar {
                 background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-                padding: 1rem 2rem;
+                padding: 2rem 2rem;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
 
-            .navbar-brand {
-                color: var(--white) !important;
-                font-size: 1.5rem;
-                font-weight: 600;
+            .navbar-title {
+                text-align: center;
+                width: 100%;
+            }
+
+            .navbar-title h3 {
+                color: white !important;
+                font-size: 3.2rem;
+                font-weight: 900;
+                letter-spacing: 0.5px;
+                margin: 0;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+                text-transform: uppercase;
+                -webkit-text-fill-color: white;
+                -webkit-text-stroke: 1px white;
+            }
+
+            .navbar-subtitle {
+                font-size: 0.9rem;
+                color: rgba(255,255,255,0.9);
+                margin-top: 0.2rem;
+                font-weight: 400;
+            }
+
+            .navbar-logo {
+                font-size: 2rem;
+                color: var(--white);
+                margin-right: 0.5rem;
             }
 
             .card {
@@ -205,6 +244,31 @@ app.index_string = '''
                 border-radius: 8px;
                 margin-top: 2rem;
             }
+
+            .sticky-summary {
+                position: sticky;
+                top: 20px;
+                max-height: calc(100vh - 40px);
+                overflow-y: auto;
+            }
+
+            .sticky-summary::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            .sticky-summary::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 4px;
+            }
+
+            .sticky-summary::-webkit-scrollbar-thumb {
+                background: var(--primary-color);
+                border-radius: 4px;
+            }
+
+            .sticky-summary::-webkit-scrollbar-thumb:hover {
+                background: var(--secondary-color);
+            }
         </style>
     </head>
     <body>
@@ -234,8 +298,8 @@ app.layout = dbc.Container([
     dbc.Navbar(
         dbc.Container([
             html.Div([
-                html.H3("Simulador de Adelanto de Haberes", className="mb-0 fw-bold text-white")
-            ], className="ms-2")
+                html.H3("Simulador de Adelanto de Haberes", className="navbar-title", style={"color": "white"})
+            ])
         ]),
         color="primary",
         dark=True,
@@ -320,12 +384,14 @@ app.layout = dbc.Container([
                             ], className="mb-3"),
                             dcc.DatePickerSingle(
                                 id="fecha-input",
-                                className="mb-3"
+                                className="mb-3",
+                                display_format="DD/MM/YYYY",
+                                placeholder="Fecha"
                             ),
-                            dbc.Button("Simular", id="simular-button", color="primary", className="mt-3 fw-bold")
+                            dbc.Button("Simular", id="simular-button", color="primary", className="mt-3 fw-bold w-100")
                         ], width=6),
                         dbc.Col([
-                            html.Div(id="validaciones-output")
+                            html.Div(id="validaciones-simulacion")
                         ], width=6)
                     ]),
                     html.Div(id="simulacion-output")
@@ -376,10 +442,13 @@ app.layout = dbc.Container([
                                 placeholder="Puesto",
                                 className="mb-3"
                             ),
-                            dbc.Button("Generar Nota", id="generar-nota-button", color="primary", className="mt-3 fw-bold"),
+                            dbc.Button("Generar Nota", id="generar-nota-button", color="primary", className="mt-3 fw-bold w-100"),
                             html.Div(id="nota-output"),
-                            html.Div(id="nota-download")
-                        ])
+                            html.Div(id="nota-download", className="mt-3")
+                        ], width=6),
+                        dbc.Col([
+                            html.Div(id="validaciones-nota")
+                        ], width=6)
                     ])
                 ])
             ])
@@ -396,7 +465,7 @@ app.layout = dbc.Container([
                     html.Hr(),
                     html.Div(id="resumen-nota")
                 ])
-            ])
+            ], className="sticky-summary")
         ], width=3)
     ]),
 
@@ -413,9 +482,10 @@ app.layout = dbc.Container([
      Output('resumen-nota', 'children')],
     [Input('session-state', 'data'),
      Input('nombre-input', 'value'),
-     Input('motivo-select', 'value')]
+     Input('motivo-select', 'value'),
+     Input('motivo-detallado-input', 'value')]
 )
-def update_resumen(state, nombre, motivo):
+def update_resumen(state, nombre, motivo, motivo_detallado):
     resumen_sueldo = []
     resumen_prestamo = []
     resumen_nota = []
@@ -457,18 +527,21 @@ def update_resumen(state, nombre, motivo):
         ]
 
     # Resumen de la nota
-    if nombre and motivo:
+    if motivo:
         resumen_nota = [
             html.H6("Datos de la Solicitud", className="fw-bold"),
-            html.P([
-                html.Span("Solicitante: ", className="fw-bold"),
-                nombre
-            ]),
             html.P([
                 html.Span("Motivo: ", className="fw-bold"),
                 motivo
             ])
         ]
+        if motivo_detallado:
+            resumen_nota.append(
+                html.P([
+                    html.Span("Motivo detallado: ", className="fw-bold"),
+                    motivo_detallado
+                ])
+            )
 
     return resumen_sueldo, resumen_prestamo, resumen_nota
 
@@ -476,7 +549,7 @@ def update_resumen(state, nombre, motivo):
 @app.callback(
     [Output('session-state', 'data'),
      Output('output-pdf-upload', 'children'),
-     Output('validaciones-output', 'children'),
+     Output('validaciones-simulacion', 'children'),
      Output('nombre-input', 'value'),
      Output('monto-input', 'value'),
      Output('simular-button', 'disabled')],
@@ -784,7 +857,7 @@ def generar_nota_callback(n_clicks, nombre, area, sector, motivo, motivo_detalla
             html.A(
                 "Descargar Nota de Solicitud",
                 href=href,
-                className="btn btn-primary"
+                className="btn btn-primary w-100"
             )
         )
     else:
