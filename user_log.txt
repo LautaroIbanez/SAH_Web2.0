@@ -1,10 +1,1 @@
-2025-05-17 09:45:18,251 - PDF PROCESADO: Usuario: Ricardo Domingo De Marco - Bruto: $2,746,063.31 - Neto: $2,164,800.66
-2025-05-17 09:45:21,421 - MONTO INGRESADO: Usuario: Ricardo Domingo De Marco - Monto: $6,000,000.00 - Tope máximo permitido: $5,000,000.00
-2025-05-17 09:45:25,878 - VALIDACIÓN ERROR: Usuario: Ricardo Domingo De Marco - Error: Monto excede tope máximo - Monto: $6,000,000.00 - Tope: $5,000,000.00 - Tasa anual: 54.0%
-2025-05-17 09:45:25,880 - SIMULACIÓN VÁLIDA: Usuario: Ricardo Domingo De Marco - Monto: $6,000,000.00 - Cuotas: 18 - Cuota: $493,421.39 - Tasa anual: 54.0% - Tope máximo: $5,000,000.00
-2025-05-17 09:45:30,861 - MONTO INGRESADO: Usuario: Ricardo Domingo De Marco - Monto: $3.00 - Tope máximo permitido: $5,000,000.00
-2025-05-17 09:45:32,286 - MONTO INGRESADO: Usuario: Ricardo Domingo De Marco - Monto: $3,820,000.00 - Tope máximo permitido: $5,000,000.00
-2025-05-17 09:45:35,904 - VALIDACIÓN ERROR: Usuario: Ricardo Domingo De Marco - Error: Cuota excede 30% sueldo neto - Cuota: $2,039,870.66 - Sueldo: $2,164,800.66 - Tasa anual: 54.0%
-2025-05-17 09:45:40,806 - SIMULACIÓN VÁLIDA: Usuario: Ricardo Domingo De Marco - Monto: $3,820,000.00 - Cuotas: 10 - Cuota: $482,767.10 - Tasa anual: 54.0% - Tope máximo: $5,000,000.00
-2025-05-17 09:45:45,293 - SIMULACIÓN REALIZADA: Usuario: Ricardo Domingo De Marco - Monto: $3,820,000.00 - Cuotas: 10 - Fecha: 2025-05-17 - Cuota mensual: $482,767.10 - Tasa anual: 54.0% - Tope máximo: $5,000,000.00
-2025-05-17 09:46:03,159 - NOTA GENERADA: Usuario: Ricardo Domingo De Marco - Área: Gerencia - Sector: Jefe - Motivo: Vacaciones - Monto: $3,820,000.00
+
