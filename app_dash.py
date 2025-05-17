@@ -12,14 +12,54 @@ import calendar
 import io
 import base64
 import os
+import json
 from resources import CODIGOS_BRUTO, CODIGOS_DEDUCCIONES, MOTIVOS, TOPE_MAXIMO_PRESTAMO, TASA_ANUAL
 import logging
 import uuid
 import tempfile
 from flask import send_file
 
-# Configuración básica de logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+# Configurar el logging para escribir en archivo y consola
+log_filename = 'logs.txt'
+metrics_filename = 'metrics.json'
+user_log_filename = 'user_log.txt'
+
+# Configurar el logger principal (logs técnicos)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[
+        logging.FileHandler(log_filename),
+        logging.StreamHandler()
+    ]
+)
+
+# Crear un logger específico para métricas
+metrics_logger = logging.getLogger('metrics')
+metrics_logger.setLevel(logging.INFO)
+metrics_handler = logging.FileHandler(metrics_filename)
+metrics_handler.setFormatter(logging.Formatter('%(message)s'))
+metrics_logger.addHandler(metrics_handler)
+
+# Crear un logger específico para acciones del usuario
+user_logger = logging.getLogger('user')
+user_logger.setLevel(logging.INFO)
+user_handler = logging.FileHandler(user_log_filename)
+user_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+user_logger.addHandler(user_handler)
+
+def log_user_action(action, details):
+    """Función auxiliar para registrar acciones del usuario"""
+    user_logger.info(f"{action}: {details}")
+
+def log_metric(event_type, data):
+    """Función auxiliar para registrar métricas en formato JSON"""
+    metric_data = {
+        'timestamp': datetime.now().isoformat(),
+        'event_type': event_type,
+        'data': data
+    }
+    metrics_logger.info(json.dumps(metric_data))
 
 # Inicializar la aplicación Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -453,7 +493,6 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
     
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
     simular_disabled = True
-    # Copia defensiva del estado para no perder valores previos
     state = dict(state) if state else {}
     
     if trigger_id == 'monto-input':
@@ -462,8 +501,12 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
         try:
             monto_limpio = monto_str.replace('$', '').replace(',', '')
             monto_float = float(monto_limpio)
-            # Solo actualiza 'monto', conserva el resto
             state['monto'] = monto_float
+            log_user_action("MONTO INGRESADO", f"Usuario: {state.get('nombre', 'No especificado')} - Monto: ${monto_float:,.2f} - Tope máximo permitido: ${TOPE_MAXIMO_PRESTAMO:,.2f}")
+            log_metric('monto_ingresado', {
+                'monto': monto_float,
+                'usuario': state.get('nombre', 'No especificado')
+            })
             return state, None, None, state.get('nombre', None), monto_str, True
         except:
             return state, None, None, state.get('nombre', None), monto_str, True
@@ -477,23 +520,46 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
                 f.write(decoded)
             resultado = calcular_bloques_forzado("temp.pdf")
             if resultado is None:
+                log_user_action("ERROR PDF", f"Archivo: {filename} - Error: No se pudieron extraer los datos")
+                log_metric('pdf_error', {
+                    'filename': filename,
+                    'error': 'No se pudieron extraer los datos'
+                })
                 return state, dbc.Alert("No se pudieron extraer los datos del PDF. Por favor, intente nuevamente.", color="danger"), None, None, None, True
             bruto, deducciones, neto, detectados = resultado
             _, _, nombre_detectado = extraer_sueldos("temp.pdf")
             if bruto is not None and neto is not None:
-                # Solo actualiza los campos extraídos, conserva el resto
                 state['bruto'] = bruto
                 state['neto'] = neto
                 state['nombre'] = nombre_detectado
                 logging.info(f"PDF subido por: {nombre_detectado} | Bruto: {bruto} | Neto: {neto}")
+                log_user_action("PDF PROCESADO", f"Usuario: {nombre_detectado} - Bruto: ${bruto:,.2f} - Neto: ${neto:,.2f}")
+                log_metric('pdf_procesado', {
+                    'filename': filename,
+                    'nombre': nombre_detectado,
+                    'bruto': bruto,
+                    'neto': neto,
+                    'deducciones': deducciones,
+                    'conceptos_detectados': detectados
+                })
                 return state, dbc.Alert([
                     html.H5("Datos extraídos correctamente"),
                     html.P(f"Sueldo bruto: ${bruto:,.2f}"),
                     html.P(f"Sueldo neto: ${neto:,.2f}")
                 ], color="success"), None, nombre_detectado, None, True
             else:
+                log_user_action("ERROR PDF", f"Archivo: {filename} - Error: Datos incompletos")
+                log_metric('pdf_error', {
+                    'filename': filename,
+                    'error': 'Datos incompletos'
+                })
                 return state, dbc.Alert("No se pudieron extraer los datos del PDF. Por favor, intente nuevamente.", color="danger"), None, None, None, True
         except Exception as e:
+            log_user_action("ERROR PDF", f"Archivo: {filename} - Error: {str(e)}")
+            log_metric('pdf_error', {
+                'filename': filename,
+                'error': str(e)
+            })
             print(f"Error al procesar PDF: {str(e)}")
             return state, dbc.Alert(f"Error al procesar el archivo: {str(e)}", color="danger"), None, None, None, True
     elif trigger_id in ['cuotas-input']:
@@ -506,10 +572,24 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
             validaciones.append(
                 dbc.Alert(f"El monto excede el tope máximo permitido de ${TOPE_MAXIMO_PRESTAMO:,.2f}.", color="danger")
             )
+            log_user_action("VALIDACIÓN ERROR", f"Usuario: {state.get('nombre', 'No especificado')} - Error: Monto excede tope máximo - Monto: ${monto:,.2f} - Tope: ${TOPE_MAXIMO_PRESTAMO:,.2f} - Tasa anual: {TASA_ANUAL}%")
+            log_metric('validacion_error', {
+                'tipo': 'tope_maximo',
+                'monto': monto,
+                'tope': TOPE_MAXIMO_PRESTAMO,
+                'usuario': state.get('nombre', 'No especificado')
+            })
         elif monto > 3 * state.get('bruto', 0):
             validaciones.append(
                 dbc.Alert("El monto excede 3 veces el sueldo bruto.", color="danger")
             )
+            log_user_action("VALIDACIÓN ERROR", f"Usuario: {state.get('nombre', 'No especificado')} - Error: Monto excede 3 veces sueldo bruto - Monto: ${monto:,.2f} - Sueldo: ${state.get('bruto', 0):,.2f} - Tasa anual: {TASA_ANUAL}%")
+            log_metric('validacion_error', {
+                'tipo': 'tope_sueldo',
+                'monto': monto,
+                'sueldo_bruto': state.get('bruto', 0),
+                'usuario': state.get('nombre', 'No especificado')
+            })
         else:
             validaciones.append(
                 dbc.Alert("El monto está dentro de los límites permitidos.", color="success")
@@ -521,12 +601,27 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
                     dbc.Alert("La cuota mensual excede el 30% del sueldo neto.", color="danger")
                 )
                 simular_disabled = True
+                log_user_action("VALIDACIÓN ERROR", f"Usuario: {state.get('nombre', 'No especificado')} - Error: Cuota excede 30% sueldo neto - Cuota: ${cuota:,.2f} - Sueldo: ${state.get('neto', 0):,.2f} - Tasa anual: {TASA_ANUAL}%")
+                log_metric('validacion_error', {
+                    'tipo': 'tope_cuota',
+                    'cuota': cuota,
+                    'sueldo_neto': state.get('neto', 0),
+                    'usuario': state.get('nombre', 'No especificado')
+                })
             else:
                 validaciones.append(
                     dbc.Alert(f"Cuota mensual estimada: ${cuota:,.2f}", color="success")
                 )
                 simular_disabled = False
                 logging.info(f"Simulación válida: monto={monto}, cuotas={cuotas}, cuota mensual={cuota}")
+                log_user_action("SIMULACIÓN VÁLIDA", f"Usuario: {state.get('nombre', 'No especificado')} - Monto: ${monto:,.2f} - Cuotas: {cuotas} - Cuota: ${cuota:,.2f} - Tasa anual: {TASA_ANUAL}% - Tope máximo: ${TOPE_MAXIMO_PRESTAMO:,.2f}")
+                log_metric('simulacion_valida', {
+                    'monto': monto,
+                    'cuotas': cuotas,
+                    'cuota': cuota,
+                    'tasa': TASA_ANUAL,
+                    'usuario': state.get('nombre', 'No especificado')
+                })
         except Exception as e:
             print(f"Error al calcular la cuota: {str(e)}")
             validaciones.append(
@@ -534,7 +629,13 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
             )
             cuota = 0
             simular_disabled = True
-        # Solo actualiza los campos de simulación, conserva el resto
+            log_user_action("ERROR CÁLCULO", f"Usuario: {state.get('nombre', 'No especificado')} - Error: {str(e)} - Tasa anual: {TASA_ANUAL}%")
+            log_metric('error_calculo', {
+                'error': str(e),
+                'monto': monto,
+                'cuotas': cuotas,
+                'usuario': state.get('nombre', 'No especificado')
+            })
         state['cuotas'] = cuotas
         state['tasa'] = TASA_ANUAL
         state['cuota'] = cuota
@@ -577,6 +678,7 @@ def update_simulacion(n_clicks, monto_str, cuotas, fecha, state):
     try:
         df_amort = generar_cuadro_amortizacion(monto, cuotas, TASA_ANUAL)
         logging.info(f"Simulación realizada: monto={monto}, cuotas={cuotas}, fecha={fecha}")
+        log_user_action("SIMULACIÓN REALIZADA", f"Usuario: {state.get('nombre', 'No especificado')} - Monto: ${monto:,.2f} - Cuotas: {cuotas} - Fecha: {fecha} - Cuota mensual: ${calcular_cuota(monto, cuotas, TASA_ANUAL):,.2f} - Tasa anual: {TASA_ANUAL}% - Tope máximo: ${TOPE_MAXIMO_PRESTAMO:,.2f}")
         return [
             html.H4("Resumen de la simulación"),
             dbc.Row([
@@ -601,6 +703,7 @@ def update_simulacion(n_clicks, monto_str, cuotas, fecha, state):
         ]
     except Exception as e:
         print(f"Error en la simulación: {str(e)}")
+        log_user_action("ERROR SIMULACIÓN", f"Usuario: {state.get('nombre', 'No especificado')} - Error: {str(e)} - Tasa anual: {TASA_ANUAL}% - Tope máximo: ${TOPE_MAXIMO_PRESTAMO:,.2f}")
         return dbc.Alert(f"Error al generar la simulación: {str(e)}", color="danger")
 
 # Diccionario temporal para guardar archivos generados por sesión
@@ -629,8 +732,36 @@ def generar_nota_callback(n_clicks, nombre, area, sector, motivo, motivo_detalla
     if n_clicks is None:
         return None, None
     if not all([nombre, area, sector, motivo, motivo_detallado, puesto]):
+        log_user_action("ERROR NOTA", f"Usuario: {nombre or 'No especificado'} - Error: Datos incompletos")
+        log_metric('nota_error', {
+            'error': 'Datos incompletos',
+            'datos_proporcionados': {
+                'nombre': bool(nombre),
+                'area': bool(area),
+                'sector': bool(sector),
+                'motivo': bool(motivo),
+                'motivo_detallado': bool(motivo_detallado),
+                'puesto': bool(puesto)
+            }
+        })
         return dbc.Alert("Por favor complete todos los datos del usuario.", color="danger"), None
+    
     logging.info(f"Nota generada para: {nombre} | Motivo: {motivo} | Detalle: {motivo_detallado} | Área: {area} | Sector: {sector} | Puesto: {puesto}")
+    log_user_action("NOTA GENERADA", f"Usuario: {nombre} - Área: {area} - Sector: {sector} - Motivo: {motivo} - Monto: ${state.get('monto', 0):,.2f}")
+    log_metric('nota_generada', {
+        'nombre': nombre,
+        'area': area,
+        'sector': sector,
+        'motivo': motivo,
+        'motivo_detallado': motivo_detallado,
+        'puesto': puesto,
+        'monto': state.get('monto', 0),
+        'cuotas': state.get('cuotas', 0),
+        'tasa': state.get('tasa', 0),
+        'cuota': state.get('cuota', 0),
+        'sueldo_neto': state.get('neto', 0)
+    })
+    
     docx_bytes = generar_nota(
         state.get('monto', 0),
         state.get('cuotas', 0),
@@ -641,7 +772,6 @@ def generar_nota_callback(n_clicks, nombre, area, sector, motivo, motivo_detalla
         state.get('neto', 0)
     )
     if docx_bytes is not None:
-        # Guardar archivo temporalmente y generar enlace de descarga
         temp_dir = tempfile.gettempdir()
         file_id = str(uuid.uuid4())
         file_path = os.path.join(temp_dir, f"nota_{file_id}.docx")
@@ -658,6 +788,16 @@ def generar_nota_callback(n_clicks, nombre, area, sector, motivo, motivo_detalla
             )
         )
     else:
+        log_user_action("ERROR NOTA", f"Usuario: {nombre} - Error: No se pudo generar el archivo")
+        log_metric('nota_error', {
+            'error': 'Error al generar el archivo',
+            'datos': {
+                'nombre': nombre,
+                'area': area,
+                'sector': sector,
+                'motivo': motivo
+            }
+        })
         return dbc.Alert("❌ No se pudo generar la nota. Por favor, intente nuevamente.", color="danger"), None
 
 # Mantener las funciones auxiliares existentes
@@ -944,8 +1084,5 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
         print(f"Error al generar nota: {e}")
         return None
 
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8050))
-    app.run_server(host="0.0.0.0", port=port)
-
+if __name__ == '__main__':
+    app.run()
