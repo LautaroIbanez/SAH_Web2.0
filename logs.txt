@@ -1,0 +1,56 @@
+2025-05-17 09:45:08,494 INFO Dash is running on http://127.0.0.1:8050/
+
+2025-05-17 09:45:08,510 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8050
+2025-05-17 09:45:08,510 INFO [33mPress CTRL+C to quit[0m
+2025-05-17 09:45:11,956 INFO 127.0.0.1 - - [17/May/2025 09:45:11] "GET / HTTP/1.1" 200 -
+2025-05-17 09:45:12,579 INFO 127.0.0.1 - - [17/May/2025 09:45:12] "GET /_favicon.ico?v=3.0.4 HTTP/1.1" 200 -
+2025-05-17 09:45:12,596 INFO 127.0.0.1 - - [17/May/2025 09:45:12] "GET /_dash-layout HTTP/1.1" 200 -
+2025-05-17 09:45:12,596 INFO 127.0.0.1 - - [17/May/2025 09:45:12] "GET /_dash-dependencies HTTP/1.1" 200 -
+2025-05-17 09:45:12,894 INFO 127.0.0.1 - - [17/May/2025 09:45:12] "[36mGET /_dash-component-suites/dash/dcc/async-upload.js HTTP/1.1[0m" 304 -
+2025-05-17 09:45:12,909 INFO 127.0.0.1 - - [17/May/2025 09:45:12] "[36mGET /_dash-component-suites/dash/dcc/async-datepicker.js HTTP/1.1[0m" 304 -
+2025-05-17 09:45:12,934 INFO 127.0.0.1 - - [17/May/2025 09:45:12] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:12,936 INFO 127.0.0.1 - - [17/May/2025 09:45:12] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:12,939 INFO 127.0.0.1 - - [17/May/2025 09:45:12] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:13,064 INFO 127.0.0.1 - - [17/May/2025 09:45:13] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:18,251 INFO PDF subido por: Ricardo Domingo De Marco | Bruto: 2746063.31 | Neto: 2164800.66
+2025-05-17 09:45:18,251 INFO PDF PROCESADO: Usuario: Ricardo Domingo De Marco - Bruto: $2,746,063.31 - Neto: $2,164,800.66
+2025-05-17 09:45:18,251 INFO {"timestamp": "2025-05-17T09:45:18.251163", "event_type": "pdf_procesado", "data": {"filename": "OracleFusionApps0605175558.pdf", "nombre": "Ricardo Domingo De Marco", "bruto": 2746063.31, "neto": 2164800.66, "deducciones": 581262.65, "conceptos_detectados": [["20", 1136154.67, "REM", "20 B\u00e1sico de Convenio 264/95"], ["30", 188678.51, "REM", "30 Ex Adicional NoRem.Volunt.Var.porCom"], ["40", 598294.76, "REM", "40 A Cuenta Futuros Aumentos Anteriores"], ["97", 173444.94, "REM", "97 A Cuenta Futuros Aumentos 09-2024"], ["103", 190789.44, "REM", "103 A Cuenta Futuros Aumentos 01-2025"], ["280", 4239.48, "REM", "280 Presentismo"], ["281", 114368.12, "REM", "281 Productividad"], ["330", 391.6, "REM", "330 L26341Canasta Pass 100% 10 de10 bimestres"], ["350", 339701.79, "REM", "350 Almuerzo Acuerdo Salarial CCT 264/95"], ["7000", 324218.54, "DED", "7000 Jubilacion"], ["7005", 88423.24, "DED", "7005 INSSJP"], ["7010", 88423.24, "DED", "7010 OSSEG"], ["8005", 80197.63, "DED", "8005 Impuesto Ganancias 4\u00aaCat."]]}}
+2025-05-17 09:45:18,251 INFO 127.0.0.1 - - [17/May/2025 09:45:18] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:18,275 INFO 127.0.0.1 - - [17/May/2025 09:45:18] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:21,421 INFO MONTO INGRESADO: Usuario: Ricardo Domingo De Marco - Monto: $6,000,000.00 - Tope máximo permitido: $5,000,000.00
+2025-05-17 09:45:21,421 INFO {"timestamp": "2025-05-17T09:45:21.421769", "event_type": "monto_ingresado", "data": {"monto": 6000000.0, "usuario": "Ricardo Domingo De Marco"}}
+2025-05-17 09:45:21,421 INFO 127.0.0.1 - - [17/May/2025 09:45:21] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:21,455 INFO 127.0.0.1 - - [17/May/2025 09:45:21] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:25,878 INFO VALIDACIÓN ERROR: Usuario: Ricardo Domingo De Marco - Error: Monto excede tope máximo - Monto: $6,000,000.00 - Tope: $5,000,000.00 - Tasa anual: 54.0%
+2025-05-17 09:45:25,880 INFO {"timestamp": "2025-05-17T09:45:25.880097", "event_type": "validacion_error", "data": {"tipo": "tope_maximo", "monto": 6000000, "tope": 5000000, "usuario": "Ricardo Domingo De Marco"}}
+2025-05-17 09:45:25,880 INFO Simulación válida: monto=6000000, cuotas=18, cuota mensual=493421.39
+2025-05-17 09:45:25,880 INFO SIMULACIÓN VÁLIDA: Usuario: Ricardo Domingo De Marco - Monto: $6,000,000.00 - Cuotas: 18 - Cuota: $493,421.39 - Tasa anual: 54.0% - Tope máximo: $5,000,000.00
+2025-05-17 09:45:25,881 INFO {"timestamp": "2025-05-17T09:45:25.881503", "event_type": "simulacion_valida", "data": {"monto": 6000000, "cuotas": 18, "cuota": 493421.39, "tasa": 54.0, "usuario": "Ricardo Domingo De Marco"}}
+2025-05-17 09:45:25,882 INFO 127.0.0.1 - - [17/May/2025 09:45:25] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:25,899 INFO 127.0.0.1 - - [17/May/2025 09:45:25] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:30,861 INFO MONTO INGRESADO: Usuario: Ricardo Domingo De Marco - Monto: $3.00 - Tope máximo permitido: $5,000,000.00
+2025-05-17 09:45:30,862 INFO {"timestamp": "2025-05-17T09:45:30.862276", "event_type": "monto_ingresado", "data": {"monto": 3.0, "usuario": "Ricardo Domingo De Marco"}}
+2025-05-17 09:45:30,863 INFO 127.0.0.1 - - [17/May/2025 09:45:30] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:30,885 INFO 127.0.0.1 - - [17/May/2025 09:45:30] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:32,286 INFO MONTO INGRESADO: Usuario: Ricardo Domingo De Marco - Monto: $3,820,000.00 - Tope máximo permitido: $5,000,000.00
+2025-05-17 09:45:32,287 INFO {"timestamp": "2025-05-17T09:45:32.286778", "event_type": "monto_ingresado", "data": {"monto": 3820000.0, "usuario": "Ricardo Domingo De Marco"}}
+2025-05-17 09:45:32,287 INFO 127.0.0.1 - - [17/May/2025 09:45:32] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:32,297 INFO 127.0.0.1 - - [17/May/2025 09:45:32] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:35,904 INFO VALIDACIÓN ERROR: Usuario: Ricardo Domingo De Marco - Error: Cuota excede 30% sueldo neto - Cuota: $2,039,870.66 - Sueldo: $2,164,800.66 - Tasa anual: 54.0%
+2025-05-17 09:45:35,905 INFO {"timestamp": "2025-05-17T09:45:35.905509", "event_type": "validacion_error", "data": {"tipo": "tope_cuota", "cuota": 2039870.66, "sueldo_neto": 2164800.66, "usuario": "Ricardo Domingo De Marco"}}
+2025-05-17 09:45:35,906 INFO 127.0.0.1 - - [17/May/2025 09:45:35] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:35,923 INFO 127.0.0.1 - - [17/May/2025 09:45:35] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:40,805 INFO Simulación válida: monto=3820000, cuotas=10, cuota mensual=482767.1
+2025-05-17 09:45:40,806 INFO SIMULACIÓN VÁLIDA: Usuario: Ricardo Domingo De Marco - Monto: $3,820,000.00 - Cuotas: 10 - Cuota: $482,767.10 - Tasa anual: 54.0% - Tope máximo: $5,000,000.00
+2025-05-17 09:45:40,806 INFO {"timestamp": "2025-05-17T09:45:40.806783", "event_type": "simulacion_valida", "data": {"monto": 3820000, "cuotas": 10, "cuota": 482767.1, "tasa": 54.0, "usuario": "Ricardo Domingo De Marco"}}
+2025-05-17 09:45:40,807 INFO 127.0.0.1 - - [17/May/2025 09:45:40] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:40,819 INFO 127.0.0.1 - - [17/May/2025 09:45:40] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:45,293 INFO Simulación realizada: monto=3820000, cuotas=10, fecha=2025-05-17
+2025-05-17 09:45:45,293 INFO SIMULACIÓN REALIZADA: Usuario: Ricardo Domingo De Marco - Monto: $3,820,000.00 - Cuotas: 10 - Fecha: 2025-05-17 - Cuota mensual: $482,767.10 - Tasa anual: 54.0% - Tope máximo: $5,000,000.00
+2025-05-17 09:45:45,295 INFO 127.0.0.1 - - [17/May/2025 09:45:45] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:45:53,343 INFO 127.0.0.1 - - [17/May/2025 09:45:53] "POST /_dash-update-component HTTP/1.1" 200 -
+2025-05-17 09:46:03,159 INFO Nota generada para: Ricardo Domingo De Marco | Motivo: Vacaciones | Detalle: para ir a ver a Boca | Área: Gerencia | Sector: Jefe | Puesto: Jefaso
+2025-05-17 09:46:03,159 INFO NOTA GENERADA: Usuario: Ricardo Domingo De Marco - Área: Gerencia - Sector: Jefe - Motivo: Vacaciones - Monto: $3,820,000.00
+2025-05-17 09:46:03,159 INFO {"timestamp": "2025-05-17T09:46:03.159100", "event_type": "nota_generada", "data": {"nombre": "Ricardo Domingo De Marco", "area": "Gerencia", "sector": "Jefe", "motivo": "Vacaciones", "motivo_detallado": "para ir a ver a Boca", "puesto": "Jefaso", "monto": 3820000, "cuotas": 10, "tasa": 54, "cuota": 482767.1, "sueldo_neto": 2164800.66}}
+2025-05-17 09:46:03,636 INFO 127.0.0.1 - - [17/May/2025 09:46:03] "POST /_dash-update-component HTTP/1.1" 200 -
