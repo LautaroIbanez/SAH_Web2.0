@@ -18,6 +18,7 @@ import logging
 import uuid
 import tempfile
 from flask import send_file
+from docx.shared import Pt
 
 # Configuración de logging
 def setup_logging():
@@ -347,8 +348,8 @@ app.layout = dbc.Container([
             # Sección 2: Simulación
             dbc.Card([
                 dbc.CardHeader([
-                    html.H4("2. Simulación de Préstamo", className="mb-0 fw-bold"),
-                    html.Small("Ingrese los parámetros del préstamo", className="text-white")
+                    html.H4("2. Adelanto de Haberes en Cuotas", className="mb-0 fw-bold"),
+                    html.Small("Ingrese los parámetros del adelanto", className="text-white")
                 ]),
                 dbc.CardBody([
                     dbc.Row([
@@ -641,21 +642,13 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
         validaciones = []
         monto = state.get('monto', 0)
         cuotas = int(cuotas)
-        if monto > TOPE_MAXIMO_PRESTAMO:
-            validaciones.append(
-                dbc.Alert(f"El monto excede el tope máximo permitido de ${TOPE_MAXIMO_PRESTAMO:,.2f}.", color="danger")
-            )
-            log_user_action("VALIDACIÓN ERROR", f"Usuario: {state.get('nombre', 'No especificado')} - Error: Monto excede tope máximo - Monto: ${monto:,.2f} - Tope: ${TOPE_MAXIMO_PRESTAMO:,.2f} - Tasa anual: {TASA_ANUAL}%")
-            log_metric('validacion_error', {
-                'tipo': 'tope_maximo',
-                'monto': monto,
-                'tope': TOPE_MAXIMO_PRESTAMO,
-                'usuario': state.get('nombre', 'No especificado')
-            })
-        elif monto > 3 * state.get('bruto', 0):
+        simular_disabled = False  # Inicialmente habilitado
+        
+        if monto > 3 * state.get('bruto', 0):
             validaciones.append(
                 dbc.Alert("El monto excede 3 veces el sueldo bruto.", color="danger")
             )
+            simular_disabled = True
             log_user_action("VALIDACIÓN ERROR", f"Usuario: {state.get('nombre', 'No especificado')} - Error: Monto excede 3 veces sueldo bruto - Monto: ${monto:,.2f} - Sueldo: ${state.get('bruto', 0):,.2f} - Tasa anual: {TASA_ANUAL}%")
             log_metric('validacion_error', {
                 'tipo': 'tope_sueldo',
@@ -676,16 +669,27 @@ def update_state_and_outputs(contents, monto_str, cuotas, filename, state):
                 simular_disabled = True
                 log_user_action("VALIDACIÓN ERROR", f"Usuario: {state.get('nombre', 'No especificado')} - Error: Cuota excede 30% sueldo neto - Cuota: ${cuota:,.2f} - Sueldo: ${state.get('neto', 0):,.2f} - Tasa anual: {TASA_ANUAL}%")
                 log_metric('validacion_error', {
-                    'tipo': 'tope_cuota',
+                    'tipo': 'tope_cuota_30',
                     'cuota': cuota,
                     'sueldo_neto': state.get('neto', 0),
+                    'usuario': state.get('nombre', 'No especificado')
+                })
+            elif cuota > TOPE_MAXIMO_PRESTAMO:
+                validaciones.append(
+                    dbc.Alert(f"La cuota mensual excede el tope máximo permitido de ${TOPE_MAXIMO_PRESTAMO:,.2f}.", color="danger")
+                )
+                simular_disabled = True
+                log_user_action("VALIDACIÓN ERROR", f"Usuario: {state.get('nombre', 'No especificado')} - Error: Cuota excede tope máximo - Cuota: ${cuota:,.2f} - Tope: ${TOPE_MAXIMO_PRESTAMO:,.2f} - Tasa anual: {TASA_ANUAL}%")
+                log_metric('validacion_error', {
+                    'tipo': 'tope_cuota_max',
+                    'cuota': cuota,
+                    'tope': TOPE_MAXIMO_PRESTAMO,
                     'usuario': state.get('nombre', 'No especificado')
                 })
             else:
                 validaciones.append(
                     dbc.Alert(f"Cuota mensual estimada: ${cuota:,.2f}", color="success")
                 )
-                simular_disabled = False
                 logging.info(f"Simulación válida: monto={monto}, cuotas={cuotas}, cuota mensual={cuota}")
                 log_user_action("SIMULACIÓN VÁLIDA", f"Usuario: {state.get('nombre', 'No especificado')} - Monto: ${monto:,.2f} - Cuotas: {cuotas} - Cuota: ${cuota:,.2f} - Tasa anual: {TASA_ANUAL}% - Tope máximo: ${TOPE_MAXIMO_PRESTAMO:,.2f}")
                 log_metric('simulacion_valida', {
@@ -1059,10 +1063,7 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
         vencimiento = ultimo_dia_habil_del_mes(fecha)
         texto_letras = num2words(monto, lang='es').replace("uno", "un").capitalize() + " pesos"
         neto_menos_cuota = neto - cuota
-
-        motivo_detallado = str(motivo_detallado) if motivo_detallado is not None else ""
-        print(f"Tipo de motivo_detallado: {type(motivo_detallado)} - Valor: '{motivo_detallado}'")
-
+        neto_menos_cuota_letra = num2words(neto_menos_cuota, lang='es').replace("uno", "un").capitalize() + " pesos"
         datos = {
             "<nombre>": nombre,
             "<area>": area,
@@ -1071,13 +1072,15 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
             "<fecha_directorio>": formatear_fecha_larga(fecha_directorio),
             "<monto>": f"${monto:,.2f}",
             "<cuotas>": str(cuotas),
+            "<cuotas_en_letras>": num2words(cuotas, lang='es').replace("uno", "un").capitalize(),
             "<motivo>": motivo,
             "<detalle_motivo>": motivo_detallado,
             "<monto_en_letras>": texto_letras,
             "<tasa>": f"{tasa_final:.2f}%",
             "<vencimiento>": formatear_fecha_larga(vencimiento),
             "<puesto>": puesto,
-            "<neto_menos_cuota>": f"${neto_menos_cuota:,.2f}"
+            "<neto_menos_cuota>": f"${neto_menos_cuota:,.2f}",
+            "<neto_menos_cuota_letra>": neto_menos_cuota_letra
         }
 
         print("Diccionario de datos:")
@@ -1107,6 +1110,9 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
                 if k in p.text:
                     for r in p.runs:
                         r.text = r.text.replace(k, v)
+                        # Aplicar formato Garamond 13pt a todos los reemplazos
+                        r.font.name = 'Garamond'
+                        r.font.size = Pt(13)
                 if k in p.text:
                     p.text = p.text.replace(k, v)
 
@@ -1118,6 +1124,9 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
                             if k in p.text:
                                 for run in p.runs:
                                     run.text = run.text.replace(k, v)
+                                    # Aplicar formato Garamond 13pt a todos los reemplazos
+                                    run.font.name = 'Garamond'
+                                    run.font.size = Pt(13)
                             if k in p.text:
                                 p.text = p.text.replace(k, v)
 
@@ -1127,6 +1136,11 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
                     for k, v in datos.items():
                         if k in c.text:
                             c.text = c.text.replace(k, v)
+                            # Aplicar formato Garamond 13pt en celdas de tabla
+                            for p in c.paragraphs:
+                                for run in p.runs:
+                                    run.font.name = 'Garamond'
+                                    run.font.size = Pt(13)
 
         try:
             df_amort = generar_cuadro_amortizacion(monto, cuotas, tasa_final)
