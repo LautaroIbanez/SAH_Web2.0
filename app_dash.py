@@ -1029,6 +1029,16 @@ def generar_cuadro_amortizacion(monto, cuotas, tasa_anual):
         })
     return pd.DataFrame(cuadro)
 
+def monto_a_letras_bancario(monto):
+    entero = int(monto)
+    decimales = int(round((monto - entero) * 100))
+    texto = num2words(entero, lang='es').replace("uno", "un").capitalize()
+    if decimales == 0:
+        return f"{texto} pesos"
+    else:
+        texto_centavos = num2words(decimales, lang='es').replace("uno", "un")
+        return f"{texto} pesos con {texto_centavos} centavos"
+
 def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, motivo, motivo_detallado, puesto, neto):
     def formatear_fecha_larga(fecha):
         meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -1061,9 +1071,9 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
     try:
         fecha_directorio = tercer_viernes(fecha)
         vencimiento = ultimo_dia_habil_del_mes(fecha)
-        texto_letras = num2words(monto, lang='es').replace("uno", "un").capitalize() + " pesos"
+        texto_letras = monto_a_letras_bancario(monto)
         neto_menos_cuota = neto - cuota
-        neto_menos_cuota_letra = num2words(neto_menos_cuota, lang='es').replace("uno", "un").capitalize() + " pesos"
+        neto_menos_cuota_letras = monto_a_letras_bancario(neto_menos_cuota)
         datos = {
             "<nombre>": nombre,
             "<area>": area,
@@ -1080,7 +1090,7 @@ def generar_nota(monto, cuotas, tasa_final, cuota, fecha, nombre, area, sector, 
             "<vencimiento>": formatear_fecha_larga(vencimiento),
             "<puesto>": puesto,
             "<neto_menos_cuota>": f"${neto_menos_cuota:,.2f}",
-            "<neto_menos_cuota_letra>": neto_menos_cuota_letra
+            "<neto_menos_cuota_letras>": neto_menos_cuota_letras
         }
 
         print("Diccionario de datos:")
